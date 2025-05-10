@@ -50,4 +50,3 @@ def crossed_wires(wires):
 
 print('Example:', crossed_wires(example))
 print('Puzzle:', crossed_wires(puzzle))
-#print('Part 2:', crossed_wires(example))
