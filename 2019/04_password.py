@@ -1,21 +1,13 @@
 from collections import Counter
 
-# This is ugly, but runs rather fast, so who cares. Dev time is expensive. ;)
-def brute_force(low=168630, high=718098):
-    candidates = []
+# This is ugly brute force, but runs quick enough, so who cares. Dev time is expensive. ;)
+def solve(low=168630, high=718098):
+    def is_valid(nums: list[str]):
+        return len(set(nums)) < 6 and all(nums[k+1] >= nums[k] for k in range(len(nums)-1))
 
-    for k in range(low, high):
-        nums = list(str(k))
-        if len(set(nums)) < 6 and all(nums[k+1] >= nums[k] for k in range(len(nums)-1)):
-            candidates.append(k)
+    candidates = [k for k in range(low, high) if is_valid(list(str(k)))]
 
-    num_part2 = 0
-    for candidate in candidates:
-        ctr = Counter(str(candidate))
-        if 2 in ctr.values():
-            num_part2 += 1
-
-    return len(candidates), num_part2
+    return len(candidates), sum(1 for candidate in candidates if 2 in Counter(str(candidate)).values())
 
 
-print(brute_force())
+print(list(zip(['Part 1', 'Part 2'], solve())))
