@@ -1,4 +1,4 @@
-# Recurse, wrong version which finds the number of words if the words could change direction.
+# Recursive, wrong version which finds the number of words if the words could change direction.
 grid = """MMMSXXMASM
 MSAMXMSMSA
 AMXSXMAAMM
