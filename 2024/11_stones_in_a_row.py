@@ -32,7 +32,7 @@ def step(numbers: dict) -> dict:
     return new_numbers
 
 
-def solve1(inp, N):
+def solve(inp, N):
     numbers = parse(inp)
     for _ in range(N):
         numbers = step(numbers)
@@ -41,8 +41,8 @@ def solve1(inp, N):
 
 
 print('Part 1:')
-solve1(example, 25)
-solve1(open('data/11.dat').read(), 25)
+solve(example, 25)
+solve(open('data/11.dat').read(), 25)
 print()
 print('Part 2:')
-solve1(open('data/11.dat').read(), 75)
+solve(open('data/11.dat').read(), 75)
