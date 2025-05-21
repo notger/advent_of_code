@@ -90,7 +90,9 @@ function parse_input(inp)
             candidates = [(x, y)]
 
             # Check the candidate for the marker and if they fit, add their neighbours to be checked next.
-            # This could certainly be made slightly more efficient by not adding invalid candidates to the list.
+            # You might think us pushing all neighbours to the candidate list and only later checking them
+            # instead of checking them in a comprehension is slower, but actually, the overall run-time is
+            # faster by 20%(!) this way. Goes to show ... compiler does compiler magic.
             while length(candidates) > 0
                 candidate = pop!(candidates)
 
