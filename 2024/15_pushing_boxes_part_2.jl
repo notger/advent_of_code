@@ -191,24 +191,139 @@ end
 # ======================================== Object oriented method =========================== #
 # Boxes and the robot will be mutable structs. This should be more readable code, easier to maintain.
 
+function parse_boxes(grid)::Vector{Box}
+    return [Box((i, j)) for i in range(1, length(grid)), j in range(1, length(grid[1])) if grid[i][j] == '[']
+end
+
+
+function parse_robot(pos)::Robot
+    return Robot(pos)
+end
+
+
+function parse_walls(grid)::Vector{Wall}
+    return [Wall((i, j)) for i in range(1, length(grid)), j in range(1, length(grid[1])) if grid[i][j] == '#']
+end
+
+
+function reparse_for_oo_approach(grid, robot)
+    return parse_boxes(grid), parse_robot(robot), parse_walls(grid)
+end
+
+
+mutable struct Robot
+    pos::Tuple{Int, Int}
+end
+
+
+mutable struct Wall
+    pos::Tuple{Int, Int}
+end
+
+
 mutable struct Box
     left::Tuple{Int, Int}
 end
 
-function can_move(box::Box, Boxes::Vector{Box})::Bool
+
+function can_move(robot::Robot, boxes::Vector{Box}, walls::Vector{Wall}, direction::Char)::Bool
+    new_pos = get_new_position(robot.pos, direction)
+    
+    downstream_boxes = [box for box in boxes if occupies(box, new_pos)]
+    downstream_walls = [wall for wall in walls if occupies(wall, new_pos)]
+
+    if length(downstream_walls) > 0  # We hit a wall.
+        return false
+
+    elseif length(downstream_boxes) == 0  # No more boxes in the way.
+        move(robot, direction)
+        return true
+
+    elseif length(downstream_boxes) > 0 && all(can_move(box, boxes, walls, direction) for box in downstream_boxes)  # All boxes can be moved.
+        move(robot, direction)
+        return true
+
+    else  # There are boxes in the way and not all of them can be moved.
+        return false
+    end
+
+    # Default value, just because we don't trust ourselves.
     return false
 end
+
+
+function get_new_position(pos::Tuple{Int, Int}, direction::Char)::Tuple{Int, Int}
+    x, y = pos
+    if direction == '>'
+        return x, y + 1
+    elseif direction == '<'
+        return x, y  - 1
+    elseif direction == 'v'
+        return x + 1, y
+    else
+        return x - 1, y
+    end
+end
+
+
+function can_move(box::Box, boxes::Vector{Box}, walls::Vector{Wall}, direction::Char)::Bool
+    # We will check whether we can move a given box. We will do this recursively and we will move the box when we find we can.
+    new_left = get_new_position(box.left, direction)
+    new_right = (new_left[1], new_left[2])
+
+    downstream_boxes = [dbox for dbox in boxes if occupies(dbox, new_left) || occupies(dbox, new_right)]
+    downstream_walls = [wall for wall in walls if occupies(wall, new_left) || occupies(wall, new_right)]
+
+    if length(downstream_walls) > 0  # We hit a wall.
+        return false
+
+    elseif length(downstream_boxes) == 0  # No more boxes in the way.
+        move(box, direction)
+        return true
+
+    elseif length(downstream_boxes) > 0 && all(can_move(dbox, boxes, walls, direction) for dbox in downstream_boxes)  # All boxes can be moved.
+        move(box, direction)
+        return true
+
+    else  # There are boxes in the way and not all of them can be moved.
+        return false
+    end
+
+    # Default value, just because we don't trust ourselves.
+    return false
+end
+
 
 function occupies(box::Box, position::Tuple{Int, Int})::Bool
-    return false
+    right = (box.left[1], box.left[2] + 1)
+    return position == box.left || position == right
 end
+
+
+function occupies(wall::Wall, position::Tuple{Int, Int})::Bool
+    return position == wall.pos
+end
+
+
+function move(robot::Robot, direction::Char)::Robot
+    robot.pos = get_new_position(robot.pos, direction)
+    return robot 
+end
+
 
 function move(box::Box, direction::Char)::Box
-    return Box
+    box.left = get_new_position(box.left, direction)
+    return box
 end
 
+
 function score(box::Box)::Int
-    return 0
+    return 100 * (box.left[1] - 1) + box.left[2] - 1
+end
+
+
+function score(boxes::Vector{Box})::Int
+    return sum(score(box) for box in boxes)
 end
 
 
@@ -235,7 +350,10 @@ end
 
 
 function solve(inp)
+    # We will implement both solutions here side by side to be able to compare them step by step and debug easier.
+    # Ofc, by the point in time you are reading this, there is no debugging necessary. ;)
     grid, robot, moves = parse_inp(inp)
+    boxes, robot2, walls = reparse_for_oo_approach(grid, robot)
     
     println()
     println("Grid at start:")
@@ -246,6 +364,13 @@ function solve(inp)
         #println("After move $move in step $k, we have ...")
         grid, robot = try_move(grid, robot, move)
         #print_grid(grid, robot)
+
+        can_move(robot2, boxes, walls, move)
+
+        if score(grid) != score(boxes)
+            println("Error in step $k!!!")
+            break
+        end
     end
 
     println()
