@@ -368,7 +368,7 @@ function print_grid(grid, robot)
 end
 
 
-function print_grid(grid, robot, boxes::Vector{Box}, walls::Vector{Wall}, robot2::Robot)::Array{N0f8}
+function print_grid(grid, robot, boxes::Vector{Box}, walls::Vector{Wall}, robot2::Robot)
     # Replace one element in the grid with the robot-indicator:
     x, y = robot
     grid[x][y] = '@'
@@ -396,7 +396,10 @@ function print_grid(grid, robot, boxes::Vector{Box}, walls::Vector{Wall}, robot2
 
     # Reverse our replacement from above:
     grid[x][y] = '.'
+end
 
+
+function generate_frame(grid, robot, k)::Array{N0f8}
     # Create a numerical grid in order to plot the matrix and later make a video out of it:
     M = zeros(N0f8, length(grid), length(grid[1]))
 
@@ -407,8 +410,13 @@ function print_grid(grid, robot, boxes::Vector{Box}, walls::Vector{Wall}, robot2
             M[row, col] = numeric_value[grid[row][col]]
         end
     end
+    M[robot[1], robot[2]] = numeric_value['@']
 
-    return convert(Array{Gray{N0f8}}, M)
+    img = convert(Array{Gray{N0f8}}, M)
+
+    save(string("15_frames/img_", lpad(k, 6, "0"), ".png"), img)
+
+    return img
 end
 
 
@@ -417,12 +425,11 @@ function score(grid)::Int
 end
 
 
-function solve(inp)
+function solve(inp, generate_video=false)
     # We will implement both solutions here side by side to be able to compare them step by step and debug easier.
     # Ofc, by the point in time you are reading this, there is no debugging necessary. ;)
     grid, robot, moves = parse_inp(inp)
     boxes, robot2, walls = reparse_for_oo_approach(grid, robot)
-    images = []
     
     println()
     println("Grid at start:")
@@ -432,10 +439,14 @@ function solve(inp)
         grid, robot = try_move(grid, robot, move)
         can_move!(robot2, boxes, walls, move)
 
+        if generate_video == true
+            _ = generate_frame(grid, robot, k)
+        end
+
         if score(grid) != score(boxes)
             println()
             println("Error in step $k after moving $move to $robot / $robot2 :")
-            append!(images, print_grid(grid, robot, boxes, walls, robot2))
+            print_grid(grid, robot, boxes, walls, robot2)
             return -1
         end
     end
@@ -444,8 +455,6 @@ function solve(inp)
     println("Grid after loop")
     _ = print_grid(grid, robot, boxes, walls, robot2)
     println()
-    
-    VideoIO.save("video.mp4", images, framerate=30, encoder_options=(crf=23, preset="medium"))
 
     return score(grid)
 end
@@ -453,5 +462,5 @@ end
 
 @time begin
     println("Part 2, example: ", solve(example2))
-    println("Part 2, puzzle: ", solve(read("data/15.dat", String)))
+    println("Part 2, puzzle: ", solve(read("data/15.dat", String), false))
 end
