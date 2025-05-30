@@ -226,7 +226,7 @@ mutable struct Box
 end
 
 
-function can_move(robot::Robot, boxes::Vector{Box}, walls::Vector{Wall}, direction::Char)::Bool
+function can_move!(robot::Robot, boxes::Vector{Box}, walls::Vector{Wall}, direction::Char)::Bool
     new_pos = get_new_position(robot.pos, direction)
     
     downstream_boxes = [box for box in boxes if occupies(box, new_pos)]
@@ -239,7 +239,7 @@ function can_move(robot::Robot, boxes::Vector{Box}, walls::Vector{Wall}, directi
         move(robot, direction)
         return true
 
-    elseif length(downstream_boxes) > 0 && all(can_move(box, boxes, walls, direction) for box in downstream_boxes)  # All boxes can be moved.
+    elseif length(downstream_boxes) > 0 && all(can_move!(box, boxes, walls, direction) for box in downstream_boxes)  # All boxes can be moved.
         move(robot, direction)
         return true
 
@@ -260,18 +260,21 @@ function get_new_position(pos::Tuple{Int, Int}, direction::Char)::Tuple{Int, Int
         return x, y  - 1
     elseif direction == 'v'
         return x + 1, y
-    else
+    elseif direction == '^'
         return x - 1, y
+    else
+        return x, y
     end
 end
 
 
-function can_move(box::Box, boxes::Vector{Box}, walls::Vector{Wall}, direction::Char)::Bool
+function can_move!(box::Box, boxes::Vector{Box}, walls::Vector{Wall}, direction::Char)::Bool
     # We will check whether we can move a given box. We will do this recursively and we will move the box when we find we can.
     new_left = get_new_position(box.left, direction)
-    new_right = (new_left[1], new_left[2])
+    new_right = (new_left[1], new_left[2] + 1)
 
-    downstream_boxes = [dbox for dbox in boxes if occupies(dbox, new_left) || occupies(dbox, new_right)]
+    # Which new boxes and which walls would we hit if we moved the box one unit?
+    downstream_boxes = [dbox for dbox in boxes if (occupies(dbox, new_left) || occupies(dbox, new_right)) && dbox != box]
     downstream_walls = [wall for wall in walls if occupies(wall, new_left) || occupies(wall, new_right)]
 
     if length(downstream_walls) > 0  # We hit a wall.
@@ -281,16 +284,13 @@ function can_move(box::Box, boxes::Vector{Box}, walls::Vector{Wall}, direction::
         move(box, direction)
         return true
 
-    elseif length(downstream_boxes) > 0 && all(can_move(dbox, boxes, walls, direction) for dbox in downstream_boxes)  # All boxes can be moved.
+    elseif length(downstream_boxes) > 0 && all(can_move!(dbox, boxes, walls, direction) for dbox in downstream_boxes)  # All boxes can be moved.
         move(box, direction)
         return true
 
     else  # There are boxes in the way and not all of them can be moved.
         return false
     end
-
-    # Default value, just because we don't trust ourselves.
-    return false
 end
 
 
@@ -344,6 +344,38 @@ function print_grid(grid, robot)
 end
 
 
+function print_grid(grid, robot, boxes::Vector{Box}, walls::Vector{Wall}, robot2::Robot)
+    # Replace one element in the grid with the robot-indicator:
+    x, y = robot
+    grid[x][y] = '@'
+
+    spacer = "       "
+
+    # Now add generate a grid based off of boxes, walls and robot2:
+    grid2 = [['.' for _ in range(1, length(grid[1]))] for _ in range(1, length(grid))]
+    for box in boxes
+        x, y = box.left
+        grid2[x][y] = '['
+        grid2[x][y + 1] = ']'
+    end
+    for wall in walls
+        x, y = wall.pos
+        grid2[x][y] = '#'
+    end
+    x, y = robot2.pos
+    grid2[x][y] = '@'
+    grid2 = [join(line, "") for line in grid2]
+
+    for (k, line) in enumerate(grid)
+        println(join(line, ""), spacer, grid2[k])
+    end
+
+    # Reverse our replacement from above:
+    grid[x][y] = '.'
+
+end
+
+
 function score(grid)::Int
     return sum(100 * (row - 1) + col - 1 for row in range(1, length(grid)), col in range(1, length(grid[1])) if grid[row][col] == '[')
 end
@@ -364,12 +396,18 @@ function solve(inp)
         #println("After move $move in step $k, we have ...")
         grid, robot = try_move(grid, robot, move)
         #print_grid(grid, robot)
-
-        can_move(robot2, boxes, walls, move)
+        can_move!(robot2, boxes, walls, move)
 
         if score(grid) != score(boxes)
-            println("Error in step $k!!!")
-            break
+            println()
+            println("Error in step $k after moving $move to $robot / $robot2 :")
+            print_grid(grid, robot, boxes, walls, robot2)
+            return -1
+        #=else
+            println()
+            println("After move $move in step $k, we have ...")
+            print_grid(grid, robot, boxes, walls, robot2)
+        =#
         end
     end
 
@@ -383,5 +421,5 @@ end
 
 @time begin
     println("Part 2, example: ", solve(example2))
-    println("Part 2: ", solve(read("data/15.dat", String)))
+    println("Part 2, puzzle: ", solve(read("data/15.dat", String)))
 end
