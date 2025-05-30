@@ -227,10 +227,20 @@ end
 
 
 function can_move!(robot::Robot, boxes::Vector{Box}, walls::Vector{Wall}, direction::Char)::Bool
+    #=
+    I had tried a fully recursive = depth-first version before, but that would not work if one box would push
+    two columns of boxes, one of which would not be able to move. Then the recursive version might have
+    gone down the movable column first, would move that column and then break with the non-movable column.
+
+    So how we are going to collect all boxes that "might" be moved and are checking that there are no walls
+    or unmovable boxes in the way. Only when no box encounters a wall will we move.
+    =#
     new_pos = get_new_position(robot.pos, direction)
     
-    downstream_boxes = [box for box in boxes if occupies(box, new_pos)]
-    downstream_walls = [wall for wall in walls if occupies(wall, new_pos)]
+    downstream_boxes::Vector{Box} = [box for box in boxes if occupies(box, new_pos)]
+    downstream_walls::Vector{Wall} = [wall for wall in walls if occupies(wall, new_pos)]
+
+    boxes_to_be_moved = Vector{Box}()
 
     if length(downstream_walls) > 0  # We hit a wall.
         return false
@@ -239,16 +249,39 @@ function can_move!(robot::Robot, boxes::Vector{Box}, walls::Vector{Wall}, direct
         move(robot, direction)
         return true
 
-    elseif length(downstream_boxes) > 0 && all(can_move!(box, boxes, walls, direction) for box in downstream_boxes)  # All boxes can be moved.
+    elseif length(downstream_boxes) > 0
+        #= 
+        For all identified candidates in downstream_boxes (should always only be one), we will follow the process:
+        1. pop one box from the list
+        2. check if moving that box would create new candidates; if so add them to the list
+        3. if the candidate encounters a wall, break immediate and return false
+        4. add the candidate to the list of boxes to be moved    
+        =#
+
+        while length(downstream_boxes) > 0
+            candidate = pop!(downstream_boxes)
+
+            # We only want to check every box once, however since we are going to add and move boxes
+            # in random order, it could be that boxes in a chain get added and moved twice.
+            if candidate in boxes_to_be_moved
+                continue
+            end
+
+            if hits_no_wall(candidate, walls, direction)
+                append!(downstream_boxes, get_downstream_boxes(candidate, boxes, direction))
+                push!(boxes_to_be_moved, candidate)
+            else
+                return false
+            end
+        end
+
+        # If we have not returned yet, then we may move the robot and all boxes:
         move(robot, direction)
+        for box in boxes_to_be_moved
+            move(box, direction)
+        end
         return true
-
-    else  # There are boxes in the way and not all of them can be moved.
-        return false
     end
-
-    # Default value, just because we don't trust ourselves.
-    return false
 end
 
 
@@ -268,29 +301,17 @@ function get_new_position(pos::Tuple{Int, Int}, direction::Char)::Tuple{Int, Int
 end
 
 
-function can_move!(box::Box, boxes::Vector{Box}, walls::Vector{Wall}, direction::Char)::Bool
-    # We will check whether we can move a given box. We will do this recursively and we will move the box when we find we can.
+function hits_no_wall(box::Box, walls::Vector{Wall}, direction::Char)::Bool
     new_left = get_new_position(box.left, direction)
     new_right = (new_left[1], new_left[2] + 1)
+    return length([wall for wall in walls if occupies(wall, new_left) || occupies(wall, new_right)]) == 0
+end
 
-    # Which new boxes and which walls would we hit if we moved the box one unit?
-    downstream_boxes = [dbox for dbox in boxes if (occupies(dbox, new_left) || occupies(dbox, new_right)) && dbox != box]
-    downstream_walls = [wall for wall in walls if occupies(wall, new_left) || occupies(wall, new_right)]
 
-    if length(downstream_walls) > 0  # We hit a wall.
-        return false
-
-    elseif length(downstream_boxes) == 0  # No more boxes in the way.
-        move(box, direction)
-        return true
-
-    elseif length(downstream_boxes) > 0 && all(can_move!(dbox, boxes, walls, direction) for dbox in downstream_boxes)  # All boxes can be moved.
-        move(box, direction)
-        return true
-
-    else  # There are boxes in the way and not all of them can be moved.
-        return false
-    end
+function get_downstream_boxes(box::Box, boxes::Vector{Box}, direction::Char)::Vector{Box}
+    new_left = get_new_position(box.left, direction)
+    new_right = (new_left[1], new_left[2] + 1)
+    return [dbox for dbox in boxes if (occupies(dbox, new_left) || occupies(dbox, new_right)) && dbox != box]
 end
 
 
@@ -392,10 +413,7 @@ function solve(inp)
     print_grid(grid, robot)
 
     for (k, move) in enumerate(moves)
-        #println()
-        #println("After move $move in step $k, we have ...")
         grid, robot = try_move(grid, robot, move)
-        #print_grid(grid, robot)
         can_move!(robot2, boxes, walls, move)
 
         if score(grid) != score(boxes)
@@ -403,11 +421,6 @@ function solve(inp)
             println("Error in step $k after moving $move to $robot / $robot2 :")
             print_grid(grid, robot, boxes, walls, robot2)
             return -1
-        #=else
-            println()
-            println("After move $move in step $k, we have ...")
-            print_grid(grid, robot, boxes, walls, robot2)
-        =#
         end
     end
 
