@@ -1,4 +1,7 @@
 using DataStructures
+using Images
+using ImageView
+using VideoIO
 
 
 example2 = "##########
@@ -365,7 +368,7 @@ function print_grid(grid, robot)
 end
 
 
-function print_grid(grid, robot, boxes::Vector{Box}, walls::Vector{Wall}, robot2::Robot)
+function print_grid(grid, robot, boxes::Vector{Box}, walls::Vector{Wall}, robot2::Robot)::Array{N0f8}
     # Replace one element in the grid with the robot-indicator:
     x, y = robot
     grid[x][y] = '@'
@@ -394,6 +397,18 @@ function print_grid(grid, robot, boxes::Vector{Box}, walls::Vector{Wall}, robot2
     # Reverse our replacement from above:
     grid[x][y] = '.'
 
+    # Create a numerical grid in order to plot the matrix and later make a video out of it:
+    M = zeros(N0f8, length(grid), length(grid[1]))
+
+    numeric_value = Dict('@' => 1, '#' => .33, '[' => .66, ']' => .66, '.' => 0)
+
+    for row in range(1, length(grid))
+        for col in range(1, length(grid[1]))
+            M[row, col] = numeric_value[grid[row][col]]
+        end
+    end
+
+    return convert(Array{Gray{N0f8}}, M)
 end
 
 
@@ -407,6 +422,7 @@ function solve(inp)
     # Ofc, by the point in time you are reading this, there is no debugging necessary. ;)
     grid, robot, moves = parse_inp(inp)
     boxes, robot2, walls = reparse_for_oo_approach(grid, robot)
+    images = []
     
     println()
     println("Grid at start:")
@@ -419,15 +435,18 @@ function solve(inp)
         if score(grid) != score(boxes)
             println()
             println("Error in step $k after moving $move to $robot / $robot2 :")
-            print_grid(grid, robot, boxes, walls, robot2)
+            append!(images, print_grid(grid, robot, boxes, walls, robot2))
             return -1
         end
     end
 
     println()
     println("Grid after loop")
-    print_grid(grid, robot)
+    _ = print_grid(grid, robot, boxes, walls, robot2)
     println()
+    
+    VideoIO.save("video.mp4", images, framerate=30, encoder_options=(crf=23, preset="medium"))
+
     return score(grid)
 end
 
