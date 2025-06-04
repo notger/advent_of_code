@@ -65,7 +65,7 @@ end
 
 
 function find_all_cheapest_paths(start, target, maze)
-    current_cheapest_cost = length(maze) * 1001  # worst case estimate for the cost; everything above that will be automatically discarded
+    current_cheapest_cost = length(maze) * 1000  # initial worst case estimate for the cost; everything above that will be automatically discarded
 
     candidates = PriorityQueue(Base.Order.Forward, [start] => 0)
     routes = []
@@ -102,7 +102,7 @@ end
 
 @time begin
     routes, cost = find_all_cheapest_paths(parse_inp(example)...)
-    println("Part 1, example: $cost")
+    println("Part 1, example: Cost of $cost for ", length(routes), " routes.")
     routes, cost = find_all_cheapest_paths(parse_inp(read("data/16.dat", String))...)
-    println("Part 1, puzzle: $cost")
+    println("Part 1, puzzle: $cost for ", length(routes), " routes.")
 end
