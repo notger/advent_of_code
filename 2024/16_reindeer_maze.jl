@@ -1,4 +1,6 @@
 using DataStructures
+using ProgressBars
+using Memoize
 
 
 example = "###############
@@ -64,6 +66,9 @@ end
 @assert get_cost_of_next_point([(5, 5)], (4, 5)) == 1001
 
 
+# The current run-time of the solution is 15 minutes, which is egregiously long.
+# A solution would be to memoize the following function properly and also have it be a greedy algo which breaks at the first solution.
+# For this, we need to change the return value to single route (which will break a ton of code) and make it recursive.
 function find_all_cheapest_paths(start, target, maze, starting_facing=(0, 1))
     current_cheapest_cost = length(maze) * 1000  # initial worst case estimate for the cost; everything above that will be automatically discarded
 
@@ -116,6 +121,9 @@ function solve(inp)::Tuple{Int, Int}
     This is a wrapper around the other function where we are going to check whether for all the points in the maze
     we can construct a path from that point to start and from that point to target for which the sum of the costs of
     both paths is equal to the cost of the cheapest path previously identified. If so, then that point is on a cheapest path.
+
+    We just have to take care that the orientation of the first leg and the one of the second leg align so we do not have
+    unwanted turns are heading off in the wrong direction. Due to how our search is set up, that might happen in some cases.
     =#
     start, target, maze = parse_inp(inp)
     cost, routes = find_all_cheapest_paths(start, target, maze)
@@ -123,7 +131,7 @@ function solve(inp)::Tuple{Int, Int}
     on_path = 0
     points_on_path = []
 
-    for point in maze
+    for point in ProgressBar(maze)
         if point in Set(p for route in routes for p in route)
             on_path += 1
             push!(points_on_path, point)
@@ -131,7 +139,7 @@ function solve(inp)::Tuple{Int, Int}
         else
             first_leg_cost, first_leg_routes = find_all_cheapest_paths(start, point, maze)
             facing = first_leg_routes[1][end][1] - first_leg_routes[1][end-1][1], first_leg_routes[1][end][2] - first_leg_routes[1][end-1][2]
-            second_leg_cost, second_leg_routes = find_all_cheapest_paths(point, target, maze, facing)
+            second_leg_cost, _ = find_all_cheapest_paths(point, target, maze, facing)
 
             if first_leg_cost + second_leg_cost == cost
                 on_path += 1
@@ -164,19 +172,10 @@ end
 
 
 @time begin
-    cost, routes = find_all_cheapest_paths(parse_inp(example)...)
-    num_points = length(Set([p for route in routes for p in route]))
-    println("Part 1, example: Cost of $cost with $num_points points on the cheapest route.")
+    cost, on_path = solve(example)
+    println("Part 1, example: Cost of $cost with $on_path points on the cheapest route.")
+    println()
 
-    println(solve(example))
-
-    #print_maze(example, routes)
-
-    cost, routes = find_all_cheapest_paths(parse_inp(read("data/16.dat", String))...)
-    num_points = length(Set([p for route in routes for p in route]))
-    println("Part 1, puzzle: Cost of $cost with $num_points points on the cheapest route.")
-
-    #println(solve(read("data/16.dat", String))
-
-    #print_maze(read("data/16.dat", String), routes)
+    cost, on_path = solve(read("data/16.dat", String))
+    println("Part 1, puzzle: Cost of $cost with $on_path points on the cheapest route.")
 end
