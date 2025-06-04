@@ -69,6 +69,8 @@ end
 # The current run-time of the solution is 15 minutes, which is egregiously long.
 # A solution would be to memoize the following function properly and also have it be a greedy algo which breaks at the first solution.
 # For this, we need to change the return value to single route (which will break a ton of code) and make it recursive.
+# We could also think about introducing the orientation in the path-finding, like we did in the Python-version, but maybe that's not needed.
+# Overall, this is a rework I am not willing to undertake right now.
 function find_all_cheapest_paths(start, target, maze, starting_facing=(0, 1))
     current_cheapest_cost = length(maze) * 1000  # initial worst case estimate for the cost; everything above that will be automatically discarded
 
