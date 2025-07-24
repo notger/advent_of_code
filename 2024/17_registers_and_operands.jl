@@ -19,6 +19,7 @@ function run(program, registers)
 
         elseif opcode == 2
             combo[b] = combo[operand] % 8
+            pos += 2
 
         elseif opcode == 3
             if combo[a] == 0
