@@ -31,7 +31,7 @@ function surrounded_by_fewer_than(start::Tuple{Int64, Int64}, grid::Vector{Tuple
 end
 
 
-function solve1(inp)
+function solve(inp)
     grid = parse_grid(inp)
     candidates = [candidate for candidate in grid if surrounded_by_fewer_than(candidate, grid, 4)]
 
