@@ -48,5 +48,7 @@ end
 @assert solve(example, 2) == 357
 @assert solve(example, 12) == 3121910778619
 
-println(solve(puzzle, 2))
-println(solve(puzzle, 12))
+@time begin
+    println(solve(puzzle, 2))
+    println(solve(puzzle, 12))
+end

@@ -2,7 +2,7 @@ example = split("11-22,95-115,998-1012,1188511880-1188511890,222220-222224,16985
 dat = split(read("data/02.dat", String), ',')
 
 
-function solve(inp)
+function solve2a(inp)
     # More readable step-by-step version. For a fancipants-version, see below.
     res1 = 0
     res2 = 0
@@ -27,7 +27,7 @@ function solve(inp)
 end
 
 
-function solve2(inp)
+function solve2b(inp)
     # Less verbose, equally fast version to the solve above. Might lack readability. ;)
     pairs = [map(x -> parse(Int, x), split(pair, '-')) for pair in inp]
 
@@ -37,8 +37,10 @@ function solve2(inp)
 end
 
 
-@assert solve(example) == (1227775554, 4174379265)
+@assert solve2a(example) == (1227775554, 4174379265)
 
 @time begin
-    println(solve(dat))
+    # Either of the two versions is fine.
+    println(solve2a(dat))
+    #println(solve2b(dat))
 end
